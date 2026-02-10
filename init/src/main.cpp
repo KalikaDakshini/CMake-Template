@@ -1,6 +1,8 @@
-#include "lib.hpp"
+#include <format>
+#include <iostream>
 
 int main()
 {
-  print("Kalika's Tranny app");
+  std::cout << std::format("Kalika's Tranny app\n");
+  return 0;
 }

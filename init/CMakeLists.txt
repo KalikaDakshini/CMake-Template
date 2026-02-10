@@ -17,7 +17,9 @@ set(BASE_FLAGS
 )
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 target_compile_options(${MAIN_TARGET} PRIVATE ${BASE_FLAGS})
+target_compile_features(${MAIN_TARGET} PRIVATE cxx_std_20)
 
 # Build specific options
 target_compile_options(${MAIN_TARGET} PRIVATE

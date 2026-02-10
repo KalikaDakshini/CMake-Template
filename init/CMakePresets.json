@@ -35,17 +35,22 @@
 	"buildPresets": [
 		{
 			"name": "base",
-			"configurePreset": "build",
+			"hidden": true,
 			"jobs": 8
 		},
 		{
+			"name": "build",
+			"inherits": "base",
+			"configurePreset": "build"
+		},
+		{
 			"name": "release",
-			"inherits": "build",
+			"inherits": "base",
 			"configurePreset": "release"
 		},
 		{
 			"name": "debug",
-			"inherits": "build",
+			"inherits": "base",
 			"configurePreset": "debug"
 		}
 	]
