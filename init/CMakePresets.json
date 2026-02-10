@@ -1,0 +1,52 @@
+{
+	"version": 4,
+	"cmakeMinimumRequired": {
+		"major": 4,
+		"minor": 2
+	},
+	"configurePresets": [
+		{
+			"name": "build",
+			"description": "Default build preset",
+			"hidden": true,
+			"generator": "Unix Makefiles",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "release",
+			"description": "Release build with optimizations",
+			"inherits": "build",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		},
+		{
+			"name": "debug",
+			"description": "Debug build with sanitizers",
+			"inherits": "build",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "base",
+			"configurePreset": "build",
+			"jobs": 8
+		},
+		{
+			"name": "release",
+			"inherits": "build",
+			"configurePreset": "release"
+		},
+		{
+			"name": "debug",
+			"inherits": "build",
+			"configurePreset": "debug"
+		}
+	]
+}

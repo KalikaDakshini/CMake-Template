@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Scripts
+# Initialises the project
+init() {
+	# Check for arguments
+	[ $# -ge 1 ] && dir_name="$1" || dir_name="."
+
+	template="~/.config/cpp_template"
+
+	! [ -e ${template} ] && fail "Template not found at ${template}"
+
+	echo "Checks passed"
+	# Copy files from template
+	rsync -av --exclude='.git' "${template}"/ ${dir_name}/
+	mkdir "${dir_name}/tests/"
+}
+
+# Adds a library to the project in the current folder
+add() {
+	# Check for argument count
+	[ $# -lt 1 ] && fail "Usage::$0 add <library_name>"
+
+	# Check if a file by the name already exists
+	dir_name="$1"
+	[ -e ${dir_name} ] && fail "${dir_name} already exists"
+
+	# Create library structure
+	echo "Creating new library"
+	file_name=$(basename ${dir_name})
+	mkdir ${dir_name}
+	cd ${dir_name}
+	mkdir include/ src/ tests/
+	touch src/${file_name}.cpp include/${file_name}.hpp
+	
+	# Generate CML
+	cat <<- EOF > CMakeLists.txt
+	cmake_minimum_required(VERSION 4.2)
+	project(lib LANGUAGES CXX)
+
+	add_library(lib OBJECT)
+	target_sources(lib
+		PRIVATE
+		src/lib.cpp
+
+		PUBLIC
+		FILE_SET HEADERS
+		BASE_DIRS include/
+		FILES
+		include/lib.hpp
+	)
+	EOF
+
+	cd - > /dev/null
+	echo -e "add_subdirectory(lib)\ntarget_link_libraries(\${MAIN_TARGET} lib)" >> CMakeLists.txt
+}
+
+# Builds the project
+build() {
+    [ $# -ge 1 ] && preset_name="$1" || preset_name="debug"
+	cmake --preset ${preset_name}
+}
+
+# Deletes library from the project
+delete() {
+	# Check for argument count
+	[ $# -lt 1 ] && fail "Usage::$0 delete <library_name>"
+
+	lib_name="$1"
+	rm -r ${lib_name}
+	sed -i.bak "/add_subdirectory(${lib_name})/d; /target_link_libraries.*${lib_name}/d" CMakeLists.txt
+}
+
+# Produce error message
+fail() {
+	echo $1
+	exit 1
+}
+
+# Run the project
+run() {
+    build "$@"
+	cmake --build build
+}
+
+# Check if subcommand is passed
+[ $# -lt 1 ] && fail "Use a subcommand: [add | build | delete | init | run]"
+
+# Dispatcher
+script_name="$1"
+shift 1
+
+case "$script_name" in
+    add)
+        add "$@"
+        ;;
+    build)
+        build "$@"
+        ;;
+	delete)
+        delete "$@"
+        ;;
+	init)
+        init "$@"
+        ;;
+	run)
+        run "$@"
+        ;;
+    *)
+		fail "Unrecognised subcommand: ${script_name}"
+        ;;
+esac
