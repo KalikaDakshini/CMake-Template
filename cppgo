@@ -7,13 +7,12 @@ initialise() {
 	# Check for arguments
 	[ $# -ge 1 ] && dir_name="$1" || dir_name="."
 
-	template="~/.config/cpp_template/init"
+	template="${HOME}/.config/cpp_template/init"
 
-	! [ -e ${template} ] && fail "Template not found at ${template}"
+	# ! [ -e ${template} ] && fail "Template not found at ${template}"
 
-	echo "Checks passed"
 	# Copy files from template
-	rsync -av --exclude='.git' "${template}"/ ${dir_name}/
+	rsync -av --exclude='.git' --exclude='build/' "${template}"/* ${dir_name}/
 	mkdir "${dir_name}/tests/"
 }
 
