@@ -1,6 +1,0 @@
-# Ignore build files
-build/
-
-# Output files
-*.[oa]
-*.bak
