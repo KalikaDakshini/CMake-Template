@@ -17,7 +17,7 @@ initialise() {
 	! [ -e ${template} ] && fail "Template not found at ${template}"
 
 	# Copy files from template
-	rsync -av --exclude='.git' --exclude='build/' "${template}"/* ${dir_name}/
+	rsync -av --exclude='.git' --exclude='build/' "${template}"/ ${dir_name}/
 	cd ${dir_name}
 
 	# Configure project name
@@ -34,7 +34,6 @@ add_lib() {
 	[ $# -lt 1 ] && fail "Usage::$0 lib <library_name>"
 
 	# Check if a file by the name already exists
-	local root_dir=$PWD
 	local dir_name="$1"
 	[ -e ${dir_name} ] && fail "${dir_name} already exists"
 
@@ -73,8 +72,9 @@ add_lib() {
 	# Add tests to the library
 	add_test ${file_name}
 
-	# Update root CML with library linking
-	cd ${root_dir}
+	# Update parent CML with library linking
+	cd ../
+	echo -e "\n# Link library ${file_name}" >> CMakeLists.txt
 	echo -e \
 	"add_subdirectory(${file_name})\ntarget_link_libraries(\${MAIN_TARGET} ${file_name})" >> CMakeLists.txt
 }
@@ -112,6 +112,9 @@ add_test() {
 		)
 	endfunction()
 	EOF
+
+	# Exit the directory
+	cd ../
 }
 
 # Builds the project

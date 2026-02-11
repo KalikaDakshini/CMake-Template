@@ -7,7 +7,8 @@ set(BIN_DIR "./bin")
 set(TST_DIR "./tests")
 
 # Main executable
-add_executable(${MAIN_TARGET} src/main.cpp)
+add_executable(${MAIN_TARGET})
+target_sources(${MAIN_TARGET} src/main.cpp)
 
 # Compilation flags
 set(BASE_FLAGS
