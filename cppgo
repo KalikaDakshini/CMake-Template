@@ -6,27 +6,39 @@ set -euo pipefail
 initialise() {
 	# Check for arguments
 	[ $# -ge 1 ] && dir_name="$1" || dir_name="."
+	local proj_name=${dir_name}
+
+	if [[ "${proj_name}" == "." ]]; then
+		proj_name=$(basename ${PWD})
+	fi
 
 	template="${HOME}/.config/cpp_template/init"
 
-	# ! [ -e ${template} ] && fail "Template not found at ${template}"
+	! [ -e ${template} ] && fail "Template not found at ${template}"
 
 	# Copy files from template
 	rsync -av --exclude='.git' --exclude='build/' "${template}"/* ${dir_name}/
-	mkdir "${dir_name}/tests/"
+	cd ${dir_name}
+
+	# Configure project name
+	sed -i \
+		's/^set([[:space:]]*MAIN_TARGET[[:space:]]*".*")/set(MAIN_TARGET "'"${proj_name}"'")/' CMakeLists.txt
+
+	# Initialise git repo
+	git init
 }
 
 # Adds a library to the project in the current folder
-add() {
+add_lib() {
 	# Check for argument count
-	[ $# -lt 1 ] && fail "Usage::$0 add <library_name>"
+	[ $# -lt 1 ] && fail "Usage::$0 lib <library_name>"
 
 	# Check if a file by the name already exists
-	dir_name="$1"
+	local root_dir=$PWD
+	local dir_name="$1"
 	[ -e ${dir_name} ] && fail "${dir_name} already exists"
 
 	# Create library structure
-	echo "Creating new library"
 	file_name=$(basename ${dir_name})
 	mkdir ${dir_name}
 	cd ${dir_name}
@@ -35,24 +47,71 @@ add() {
 	
 	# Generate CML
 	cat <<- EOF > CMakeLists.txt
-	cmake_minimum_required(VERSION 4.2)
-	project(lib LANGUAGES CXX)
+	cmake_minimum_required(VERSION 4.0)
+	project(${file_name} LANGUAGES CXX)
 
-	add_library(lib OBJECT)
-	target_sources(lib
+	# Configure library and dependencies
+	add_library(${file_name} OBJECT)
+	target_sources(${file_name}
 		PRIVATE
-		src/lib.cpp
+		src/${file_name}.cpp
 
 		PUBLIC
 		FILE_SET HEADERS
 		BASE_DIRS include/
 		FILES
-		include/lib.hpp
+		include/${file_name}.hpp
 	)
+
+	# Enable Testing
+	if(BUILD_TESTS)
+		enable_testing()
+		add_subdirectory(tests)
+	endif()
 	EOF
 
-	cd - > /dev/null
-	echo -e "add_subdirectory(lib)\ntarget_link_libraries(\${MAIN_TARGET} lib)" >> CMakeLists.txt
+	# Add tests to the library
+	add_test ${file_name}
+
+	# Update root CML with library linking
+	cd ${root_dir}
+	echo -e \
+	"add_subdirectory(${file_name})\ntarget_link_libraries(\${MAIN_TARGET} ${file_name})" >> CMakeLists.txt
+}
+
+add_test() {
+	local proj_name="$1"
+	local file_name=test_${proj_name}
+
+	cd tests/
+	# Create a sample test file
+	cat <<-EOF > ${file_name}.cpp
+	int main() {
+		return 0;
+	}
+	EOF
+	
+	# Write CMakeLists.txt
+	cat <<- EOF > CMakeLists.txt
+	add_executable(${file_name})
+
+	target_sources(${file_name}
+	PRIVATE
+		${file_name}.cpp
+	)
+
+	target_link_libraries(${file_name}
+	PRIVATE
+		${proj_name}
+	)
+
+	function(make_test op)
+		add_test(
+			NAME \${op}
+			COMMAND ${file_name} \${op}
+		)
+	endfunction()
+	EOF
 }
 
 # Builds the project
@@ -66,45 +125,90 @@ delete() {
 	# Check for argument count
 	[ $# -lt 1 ] && fail "Usage::$0 delete <library_name>"
 
-	lib_name="$1"
+	local lib_name="$1"
 	rm -r ${lib_name}
 	sed -i.bak "/add_subdirectory(${lib_name})/d; /target_link_libraries.*${lib_name}/d" CMakeLists.txt
 }
 
 # Produce error message
 fail() {
-	echo $1
+	echo $1 >&2
 	exit 1
 }
 
 # Run the project
 run() {
-    build "$@"
+    [ $# -ge 1 ] && preset_name="$1" || preset_name="debug"
+	build "$@"
 	cmake --build build
 }
 
+# Run tests
+run_test() {
+	local preset_name="debug"
+	local test_regex=""
+
+	OPTIND=1
+	while getopts ":d:R:" opt; do
+		case "$opt" in
+			d)
+				preset_name="$OPTARG"
+				;;
+			R)
+				test_regex="$OPTARG"
+				;;
+			\?)
+				fail "cppgo test: invalid option -$OPTARG"
+				;;
+			:)
+				fail "cppgo test: -$OPTARG requires an argument"
+				return 1
+				;;
+		esac
+	done
+
+	# Run tests
+	build ${preset_name}
+	if [[ -n "$test_regex" ]]; then
+		ctest --test-dir build -R ${test_regex}
+	else
+		ctest --test-dir build
+	fi
+}
+
+
 # Check if subcommand is passed
-[ $# -lt 1 ] && fail "Use a subcommand: [add | build | delete | init | run]"
+[ $# -lt 1 ] && \
+fail "Use a subcommand: [build | delete | init | lib | run | test]"
 
 # Dispatcher
 script_name="$1"
 shift 1
 
 case "$script_name" in
-    add)
-        add "$@"
-        ;;
     build)
+		echo "Building project"
         build "$@"
         ;;
 	delete)
+		echo "Deleting library $1"
         delete "$@"
         ;;
 	init)
+		echo "Initialising project"
         initialise "$@"
         ;;
+	lib)
+		echo "Adding library $1"
+        add_lib "$@"
+        ;;
 	run)
+		echo "Running project"
         run "$@"
+        ;;
+	test)
+		echo "Running tests $1"
+        run_test "$@"
         ;;
     *)
 		fail "Unrecognised subcommand: ${script_name}"

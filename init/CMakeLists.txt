@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2)
+cmake_minimum_required(VERSION 4.0)
 project("CPP Project" LANGUAGES CXX)
 
 # Set variables
@@ -32,17 +32,17 @@ target_link_options(${MAIN_TARGET} PRIVATE
 	$<$<CONFIG:Debug>:-fsanitize=address>
 )
 
+# Append CMake path
+list(APPEND CMAKE_MODULE_PATH "/usr/lib/cmake")
+
 # Executable name
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set_target_properties(${MAIN_TARGET} PROPERTIES
-		OUTPUT_NAME "tranny.dbg"
-		RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}"
-	)
-else()
-	set_target_properties(${MAIN_TARGET} PROPERTIES
-		OUTPUT_NAME "tranny.app"
-		RUNTIME_OUTPUT_DIRECTORY "${BIN_DIR}"
-	)
-endif()
+set_target_properties(${MAIN_TARGET} PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
+	OUTPUT_NAME_DEBUG "tranny.dbg"
+	OUTPUT_NAME_RELEASE "tranny.app"
+)
+
+# Testing
+option(BUILD_TESTING "Enable testing and build tests" ON)
 
 # Link libraries
