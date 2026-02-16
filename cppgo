@@ -38,7 +38,8 @@ add_lib() {
 	[ -e ${dir_name} ] && fail "${dir_name} already exists"
 
 	# Create library structure
-	file_name=$(basename ${dir_name})
+	lower_case=$(basename ${dir_name})
+	file_name="${lower_case^}"
 	mkdir ${dir_name}
 	cd ${dir_name}
 	mkdir include/ src/ tests/
@@ -50,8 +51,8 @@ add_lib() {
 	project(${file_name} LANGUAGES CXX)
 
 	# Configure library and dependencies
-	add_library(${file_name} OBJECT)
-	target_sources(${file_name}
+	add_library(${lower_case} OBJECT)
+	target_sources(${lower_case}
 		PRIVATE
 		src/${file_name}.cpp
 
@@ -74,14 +75,14 @@ add_lib() {
 
 	# Update parent CML with library linking
 	cd ../
-	echo -e "\n# Link library ${file_name}" >> CMakeLists.txt
+	echo -e "\n# Link library ${lower_case}" >> CMakeLists.txt
 	echo -e \
-	"add_subdirectory(${file_name})\ntarget_link_libraries(\${MAIN_TARGET} ${file_name})" >> CMakeLists.txt
+	"add_subdirectory(${lower_case})\ntarget_link_libraries(\${MAIN_TARGET} ${lower_case})" >> CMakeLists.txt
 }
 
 add_test() {
 	local proj_name="$1"
-	local file_name=test_${proj_name}
+	local file_name=test${proj_name}
 
 	cd tests/
 	# Create a sample test file
@@ -102,7 +103,7 @@ add_test() {
 
 	target_link_libraries(${file_name}
 	PRIVATE
-		${proj_name}
+		${proj_name,,}
 	)
 
 	function(make_test op)
