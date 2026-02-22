@@ -42,8 +42,8 @@ add_lib() {
 	file_name="${lower_case^}"
 	mkdir ${dir_name}
 	cd ${dir_name}
-	mkdir include/ src/ tests/
-	touch src/${file_name}.cpp include/${file_name}.hpp
+	mkdir -p include/${dir_name} src/ tests/
+	touch src/${file_name}.cpp include/${dir_name}/${file_name}.hpp
 	
 	# Generate CML
 	cat <<- EOF > CMakeLists.txt
@@ -60,7 +60,11 @@ add_lib() {
 		FILE_SET HEADERS
 		BASE_DIRS include/
 		FILES
-		include/${file_name}.hpp
+		include/${dir_name}/${file_name}.hpp
+	)
+
+	target_include_directories(${file_name}
+		PUBLIC \${CMAKE_CURRENT_SOURCE_DIR}/include
 	)
 
 	# Enable Testing
@@ -77,7 +81,7 @@ add_lib() {
 	cd ../
 	echo -e "\n# Link library ${lower_case}" >> CMakeLists.txt
 	echo -e \
-	"add_subdirectory(${lower_case})\ntarget_link_libraries(\${MAIN_TARGET} ${lower_case})" >> CMakeLists.txt
+	"add_subdirectory(${lower_case})\ntarget_link_libraries(\${MAIN_TARGET} PRIVATE ${lower_case})" >> CMakeLists.txt
 }
 
 add_test() {
@@ -131,7 +135,7 @@ delete() {
 
 	local lib_name="$1"
 	rm -r ${lib_name}
-	sed -i.bak "/add_subdirectory(${lib_name})/d; /target_link_libraries.*${lib_name}/d" CMakeLists.txt
+	sed -i.bak "/Link library ${lib_name}/d; /add_subdirectory(${lib_name})/d; /target_link_libraries.*${lib_name}/d" CMakeLists.txt
 }
 
 # Produce error message
